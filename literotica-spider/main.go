@@ -11,14 +11,20 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	//"github.com/bmaupin/go-epub"
 )
 
-var url string
-var offset int
+var (
+	url string
+	offset int
+	bookType string
+)
 
 func init() {
 	flag.StringVar(&url, "url", "", "填文章的链接")
-	flag.IntVar(&offset, "offset", 0, "要跳过几个文章")
+	flag.StringVar(&bookType, "booktype", "epub", "支持txt和epub") // TODO
+	flag.IntVar(&offset, "offset", 0, "要跳过几个文章") // TODO
 	flag.Parse()
 }
 
@@ -55,6 +61,11 @@ func main() {
 type info struct {
 	title    string
 	indexURL []string
+}
+
+type indexInfo struct {
+	title string
+	content string
 }
 
 // getIndexContent 获取一个索引的内容
