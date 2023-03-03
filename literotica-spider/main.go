@@ -1,29 +1,27 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	//"github.com/bmaupin/go-epub"
+	htmlstrip "github.com/grokify/html-strip-tags-go"
 )
 
 var (
-	url string
-	offset int
+	url      string
+	offset   int
 	bookType string
 )
 
 func init() {
 	flag.StringVar(&url, "url", "", "填文章的链接")
-	flag.StringVar(&bookType, "booktype", "epub", "支持txt和epub") // TODO
+	flag.StringVar(&bookType, "booktype", "epub", "支持txt和epub")
 	flag.IntVar(&offset, "offset", 0, "要跳过几个文章") // TODO
 	flag.Parse()
 }
@@ -36,25 +34,26 @@ func main() {
 		return
 	}
 
-	// 创建文件句柄
-	filePath := info.title + ".txt"
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Println("文件打开失败", err)
-		return
+	var writer writer
+	if bookType == "txt" {
+		writer = &txtWriter{}
 	}
-	defer file.Close()
+	if bookType == "epub" {
+		writer = &epubWriter{}
+	}
+	// 创建文件句柄
+	writer.Create(info.title)
+	defer writer.Save()
+
 	// 遍历读取并写入
-	write := bufio.NewWriter(file)
-	for i, indexURL := range info.indexURL {
-		cnt, err := getIndexContent(indexURL, true)
+	for _, indexURL := range info.indexURL {
+		indexInfo, err := getIndexContent(indexURL, true)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		write.WriteString(fmt.Sprintf("\n=======Chapter %v=======\n\n", i+1))
-		write.WriteString(cnt)
-		write.Flush()
+		indexInfo.title = strings.ReplaceAll(indexInfo.title, info.title, "")
+		writer.AddSection(indexInfo.title, indexInfo.content)
 	}
 }
 
@@ -64,26 +63,37 @@ type info struct {
 }
 
 type indexInfo struct {
-	title string
+	title   string
 	content string
 }
 
 // getIndexContent 获取一个索引的内容
-func getIndexContent(url string, subpage bool) (string, error) {
+func getIndexContent(url string, subpage bool) (*indexInfo, error) {
 	body, err := download(url)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	// 标题
+	var title string
+	if subpage {
+		reg := regexp.MustCompile(`<h1 class="j_bm headline j_eQ">(.*?)<\/h1>`)
+		result := reg.FindStringSubmatch(body)
+		if len(result) < 2 {
+			return nil, errors.New("获取索引标题失败，请检查页面内容和正则")
+		}
+		title = result[1]
+	}
+
+	// 内容
 	reg := regexp.MustCompile(`<div class="panel article aa_eQ"><div class="aa_ht"><div>(.*?)</div></div><div class="aa_ht"></div>`)
 	result := reg.FindStringSubmatch(body)
 	if len(result) < 2 {
-		return "", errors.New("获取索引内容失败，请检查页面内容和正则")
+		return nil, errors.New("获取索引内容失败，请检查页面内容和正则")
 	}
 	cnt := result[1]
 	cnt = strings.ReplaceAll(cnt, "<p>", "")
 	cnt = strings.ReplaceAll(cnt, "</p>", "\n\n")
 
-	// fmt.Println(cnt)
 	// 分页
 	if subpage {
 		reg := regexp.MustCompile(`<a class="l_bJ" href="([^"]*?)"`)
@@ -94,12 +104,15 @@ func getIndexContent(url string, subpage bool) (string, error) {
 			}
 			pageCnt, err := getIndexContent("https://www.literotica.com"+pageR[1], false)
 			if err != nil {
-				return "", errors.New("page 获取失败:" + pageR[1])
+				return nil, errors.New("page 获取失败:" + pageR[1])
 			}
-			cnt += pageCnt
+			cnt += pageCnt.content
 		}
 	}
-	return cnt, nil
+	return &indexInfo{
+		title:   title,
+		content: htmlstrip.StripTags(cnt),
+	}, nil
 }
 
 // getIndex 获取信息 返回为title,[]indexurl,error
