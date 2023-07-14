@@ -41,26 +41,27 @@ func main() {
 	}
 }
 
+// 获取目录下的所有文件
 func getImages(dirPath string) []string {
-
 	// 获取目录下的所有文件和子目录
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
+		if isImageFile(filePath) {
+			return []string{dirPath}
+		}
 		fmt.Println("无法读取目录：", err)
-		return []string{dirPath}
+		return nil
 	}
 
 	var list []string
 	// 遍历文件和子目录
 	for _, file := range files {
 		filePath := filepath.Join(dirPath, file.Name())
-
 		// 判断是否为目录
 		if file.IsDir() {
 			fmt.Println("子目录：", filePath)
 			continue
 		}
-
 		// 判断是否为图片文件（可根据实际需要修改判断条件）
 		if isImageFile(filePath) {
 			fmt.Println("图片文件：", filePath)
@@ -74,7 +75,6 @@ func getImages(dirPath string) []string {
 func isImageFile(filePath string) bool {
 	// 获取文件扩展名
 	ext := strings.ToLower(filepath.Ext(filePath))
-
 	// 判断是否为图片扩展名（可根据实际需要添加更多判断条件）
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".gif":
