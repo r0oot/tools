@@ -29,8 +29,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&device, "url", "", "设备")
-	flag.StringVar(&filePath, "file", "", "文件路径")
+	flag.StringVar(&device, "device", "", "设备，目前只支持ipad")
+	flag.StringVar(&filePath, "file", "", "文件路径，可以传图片，或者目录，传目录则处理整个目录下的文件")
 	flag.Parse()
 }
 
