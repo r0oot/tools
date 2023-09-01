@@ -21,7 +21,7 @@ func (e *EpubWriter) Create(basicInfo *protocol.BasicInfo) error {
 
 func (e *EpubWriter) AddSection(sectionInfo *protocol.SectionInfo) error {
 	content := strings.ReplaceAll(sectionInfo.Content, "\n", "</p><p>")
-	content = "<p>" + sectionInfo.Content + "</p>"
+	content = "<p>" + content + "</p>"
 	e.writer.AddSection(`<h1>`+sectionInfo.Title+`</h1>`+content, sectionInfo.Title, "", "")
 	return nil
 }

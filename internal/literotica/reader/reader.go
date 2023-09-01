@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/r0oot/tools/internal/literotica/processor"
 	"github.com/r0oot/tools/internal/literotica/protocol"
@@ -58,6 +57,7 @@ func (r *Reader) getSectionPageByPage(url string, subpage bool) (*protocol.Secti
 			return nil, errors.New("获取索引标题失败，请检查页面内容和正则")
 		}
 		title = result[1]
+		title = strings.Replace(title, "Home for Horny Monsters ", "", -1) // XXX 临时针对的
 	}
 	// 内容
 	reg := regexp.MustCompile(`<div class="panel article aa_eQ"><div class="aa_ht"><div>(.*?)</div></div><div class="aa_ht"></div>`)
@@ -82,6 +82,14 @@ func (r *Reader) getSectionPageByPage(url string, subpage bool) (*protocol.Secti
 				return nil, errors.New("page 获取失败:" + pageR[1])
 			}
 			cnt += pageCnt.Content
+		}
+	}
+	{
+		// XXX 里面的标题
+		reg := regexp.MustCompile(`<strong>(.*?)</strong>`)
+		result := reg.FindStringSubmatch(body)
+		if len(result) >= 2 {
+			title += " " + result[1]
 		}
 	}
 
@@ -134,7 +142,7 @@ func getBasicInfo(url string) (*protocol.BasicInfo, error) {
 	}, nil
 }
 func download(url string) (string, error) {
-	time.Sleep(1 * time.Second)
+	//time.Sleep(1 * time.Second)
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
