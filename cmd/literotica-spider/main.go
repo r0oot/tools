@@ -13,7 +13,7 @@ func main() {
 	reqBody := protocol.ParseReqBody()
 	p := processor.New(
 		&reader.Reader{},
-		newWriter(reqBody.BookType))
+		writer.NewWriter(reqBody.BookType))
 	if err := p.Do(&reqBody); err != nil {
 		fmt.Println(err)
 		return
